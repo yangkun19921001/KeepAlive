@@ -1,0 +1,29 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.ykun.live_library">
+
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- android:process=":remote"-->
+    <application>
+        <service
+            android:name="com.ykun.live_library.service.LocalService"
+            android:exported="true"
+            android:process=":local"></service>
+        <service
+            android:name="com.ykun.live_library.service.RemoteService"
+            android:exported="true"
+            android:process=":remote"></service>
+
+        <receiver android:name=".revices.NotificationClickReceiver">
+            <intent-filter>
+                <action android:name="CLICK_NOTIFICATION"></action>
+            </intent-filter>
+        </receiver>
+
+        <activity android:name="com.ykun.live_library.onepx.OnePixelActivity"></activity>
+        <service
+            android:name="com.ykun.live_library.service.JobHandlerService"
+            android:permission="android.permission.BIND_JOB_SERVICE"></service>
+
+    </application>
+</manifest>
