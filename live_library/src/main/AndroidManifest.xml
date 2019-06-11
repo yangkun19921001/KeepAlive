@@ -21,7 +21,7 @@
             android:exported="true"
             android:process=":remote"></service>
 
-        <receiver android:name=".revices.NotificationClickReceiver">
+        <receiver android:name=".receive.NotificationClickReceiver">
             <intent-filter>
                 <action android:name="CLICK_NOTIFICATION"></action>
             </intent-filter>
@@ -35,7 +35,7 @@
 
 
         <provider
-            android:authorities="com.lain.preference"
+            android:authorities="com.ykun.preference"
             android:name=".pro_sp.SharedPreferenceProvider"
             android:process=":remote"
             android:exported="false"/>

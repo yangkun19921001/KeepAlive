@@ -14,15 +14,17 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.RemoteException;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.ykun.keeplive.KeepAliveAidl;
+import com.ykun.live_library.KeepAliveRuning;
 import com.ykun.live_library.R;
 import com.ykun.live_library.config.KeepAliveConfig;
 import com.ykun.live_library.config.NotificationUtils;
 import com.ykun.live_library.config.RunMode;
-import com.ykun.live_library.revices.NotificationClickReceiver;
-import com.ykun.live_library.revices.OnepxReceiver;
+import com.ykun.live_library.receive.NotificationClickReceiver;
+import com.ykun.live_library.receive.OnepxReceiver;
 import com.ykun.live_library.utils.SPUtils;
 
 import static com.ykun.live_library.config.KeepAliveConfig.SP_NAME;
@@ -36,6 +38,7 @@ public final class LocalService extends Service {
     private LocalBinder mBilder;
     private Handler handler;
     private String TAG = getClass().getSimpleName();
+    private KeepAliveRuning mKeepAliveRuning;
 
     @Override
     public void onCreate() {
@@ -59,12 +62,15 @@ public final class LocalService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         //播放无声音乐
+        KeepAliveConfig.runMode = SPUtils.getInstance(getApplicationContext(), SP_NAME).getInt(KeepAliveConfig.RUN_MODE);
+        Log.d(TAG, "运行模式：" + KeepAliveConfig.runMode);
         if (mediaPlayer == null && KeepAliveConfig.runMode == RunMode.HIGH_POWER_CONSUMPTION) {
             mediaPlayer = MediaPlayer.create(this, R.raw.novioce);
             mediaPlayer.setVolume(0f, 0f);
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mediaPlayer) {
+                    Log.i(TAG, "循环播放音乐");
                     play();
                 }
             });
@@ -86,23 +92,9 @@ public final class LocalService extends Service {
         intentFilter2.addAction("_ACTION_SCREEN_OFF");
         intentFilter2.addAction("_ACTION_SCREEN_ON");
         registerReceiver(screenStateReceiver, intentFilter2);
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                KeepAliveConfig.CONTENT = SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.CONTENT);
-                KeepAliveConfig.DEF_ICONS = SPUtils.getInstance(getApplicationContext(), SP_NAME).getInt(KeepAliveConfig.RES_ICON, R.drawable.ic_launcher);
-                KeepAliveConfig.TITLE = SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.TITLE);
-                if (KeepAliveConfig.TITLE != null && KeepAliveConfig.CONTENT != null) {
-                    //启用前台服务，提升优先级
-                    Intent intent2 = new Intent(getApplicationContext(), NotificationClickReceiver.class);
-                    intent2.setAction(NotificationClickReceiver.CLICK_NOTIFICATION);
-                    Notification notification = NotificationUtils.createNotification(LocalService.this, KeepAliveConfig.TITLE, KeepAliveConfig.CONTENT, KeepAliveConfig.DEF_ICONS, intent2);
-                    startForeground(KeepAliveConfig.FOREGROUD_NOTIFICATION_ID, notification);
-                    Log.d("JOB-->", TAG + "0 显示通知栏");
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
-        }
+
+        //开启一个前台通知，用于提升服务进程优先级
+        shouDefNotify();
         //绑定守护进程
         try {
             Intent intent3 = new Intent(this, RemoteService.class);
@@ -119,13 +111,14 @@ public final class LocalService extends Service {
             Log.i("HideForegroundService--", e.getMessage());
 
         }
-        if (KeepAliveConfig.keepLiveService != null) {
-            KeepAliveConfig.keepLiveService.onWorking();
-        }
+        if (mKeepAliveRuning == null)
+            mKeepAliveRuning = new KeepAliveRuning();
+        mKeepAliveRuning.onRuning();
         return START_STICKY;
     }
 
     private void play() {
+        Log.i(TAG, "播放音乐");
         if (mediaPlayer != null && !mediaPlayer.isPlaying()) {
             mediaPlayer.start();
         }
@@ -153,7 +146,7 @@ public final class LocalService extends Service {
     private final class LocalBinder extends KeepAliveAidl.Stub {
         @Override
         public void wakeUp(String title, String discription, int iconRes) throws RemoteException {
-
+            shouDefNotify();
         }
     }
 
@@ -201,8 +194,32 @@ public final class LocalService extends Service {
         unbindService(connection);
         unregisterReceiver(mOnepxReceiver);
         unregisterReceiver(screenStateReceiver);
-        if (KeepAliveConfig.keepLiveService != null) {
-            KeepAliveConfig.keepLiveService.onStop();
+
+        if (mKeepAliveRuning != null) {
+            mKeepAliveRuning.onStop();
+        }
+
+        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+            mediaPlayer.stop();
+            mediaPlayer = null;
+        }
+    }
+
+    private void shouDefNotify() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            KeepAliveConfig.CONTENT = SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.CONTENT);
+            KeepAliveConfig.DEF_ICONS = SPUtils.getInstance(getApplicationContext(), SP_NAME).getInt(KeepAliveConfig.RES_ICON, R.drawable.ic_launcher);
+            KeepAliveConfig.TITLE = SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.TITLE);
+            String title = SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.TITLE);
+            Log.d("JOB-->" + TAG, "KeepAliveConfig.CONTENT_" + KeepAliveConfig.CONTENT + "    " + KeepAliveConfig.TITLE + "  " + title);
+            if (!TextUtils.isEmpty(KeepAliveConfig.TITLE) && !TextUtils.isEmpty(KeepAliveConfig.CONTENT)) {
+                //启用前台服务，提升优先级
+                Intent intent2 = new Intent(getApplicationContext(), NotificationClickReceiver.class);
+                intent2.setAction(NotificationClickReceiver.CLICK_NOTIFICATION);
+                Notification notification = NotificationUtils.createNotification(LocalService.this, KeepAliveConfig.TITLE, KeepAliveConfig.CONTENT, KeepAliveConfig.DEF_ICONS, intent2);
+                startForeground(KeepAliveConfig.FOREGROUD_NOTIFICATION_ID, notification);
+                Log.d("JOB-->", TAG + "显示通知栏");
+            }
         }
     }
 }

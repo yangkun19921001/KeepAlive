@@ -8,7 +8,7 @@ import android.support.annotation.NonNull;
 
 public class PreferenceUtil {
     public static final String METHOD_CONTAIN_KEY = "method_contain_key";
-    public static final String AUTHORITY = "com.lain.preference";
+    public static final String AUTHORITY = "com.ykun.preference";
     public static final Uri URI = Uri.parse("content://" + AUTHORITY);
     public static final String METHOD_QUERY_VALUE = "method_query_value";
     public static final String METHOD_EIDIT_VALUE = "method_edit";

@@ -10,13 +10,14 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.RemoteException;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.ykun.keeplive.KeepAliveAidl;
 import com.ykun.live_library.R;
 import com.ykun.live_library.config.KeepAliveConfig;
 import com.ykun.live_library.config.NotificationUtils;
-import com.ykun.live_library.revices.NotificationClickReceiver;
+import com.ykun.live_library.receive.NotificationClickReceiver;
 import com.ykun.live_library.utils.SPUtils;
 
 import static com.ykun.live_library.config.KeepAliveConfig.SP_NAME;
@@ -51,32 +52,27 @@ public final class RemoteService extends Service {
             this.bindService(new Intent(RemoteService.this, LocalService.class),
                     connection, Context.BIND_ABOVE_CLIENT);
 
-            shouDefNotify(intent);
+            shouDefNotify();
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         }
         return START_STICKY;
     }
 
-    private void shouDefNotify(Intent intent) {
+    private void shouDefNotify() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (intent != null && intent.getExtras() != null) {
-                KeepAliveConfig.CONTENT = intent.getExtras().getString(KeepAliveConfig.CONTENT);
-                KeepAliveConfig.DEF_ICONS = intent.getExtras().getInt(KeepAliveConfig.RES_ICON, R.drawable.ic_launcher);
-                KeepAliveConfig.TITLE = intent.getExtras().getString(KeepAliveConfig.TITLE);
-            } else {
-                KeepAliveConfig.CONTENT = SPUtils.getInstance(getApplicationContext(),SP_NAME).getString(KeepAliveConfig.CONTENT);
-                KeepAliveConfig.DEF_ICONS = SPUtils.getInstance(getApplicationContext(),SP_NAME).getInt(KeepAliveConfig.RES_ICON,R.drawable.ic_launcher);
-                KeepAliveConfig.TITLE = SPUtils.getInstance(getApplicationContext(),SP_NAME).getString(KeepAliveConfig.TITLE);
-
-            }
-            if (KeepAliveConfig.TITLE != null && KeepAliveConfig.CONTENT != null) {
+            KeepAliveConfig.CONTENT = SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.CONTENT);
+            KeepAliveConfig.DEF_ICONS = SPUtils.getInstance(getApplicationContext(), SP_NAME).getInt(KeepAliveConfig.RES_ICON, R.drawable.ic_launcher);
+            KeepAliveConfig.TITLE = SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.TITLE);
+            String title = SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.TITLE);
+            Log.d("JOB-->"+TAG,"KeepAliveConfig.CONTENT_"+KeepAliveConfig.CONTENT+"    " + KeepAliveConfig.TITLE+"  "+title);
+            if (!TextUtils.isEmpty(KeepAliveConfig.TITLE) && !TextUtils.isEmpty( KeepAliveConfig.CONTENT)) {
                 //启用前台服务，提升优先级
                 Intent intent2 = new Intent(getApplicationContext(), NotificationClickReceiver.class);
                 intent2.setAction(NotificationClickReceiver.CLICK_NOTIFICATION);
                 Notification notification = NotificationUtils.createNotification(RemoteService.this, KeepAliveConfig.TITLE, KeepAliveConfig.CONTENT, KeepAliveConfig.DEF_ICONS, intent2);
                 startForeground(KeepAliveConfig.FOREGROUD_NOTIFICATION_ID, notification);
-                Log.d("JOB-->",TAG+"显示通知栏");
+                Log.d("JOB-->", TAG + "显示通知栏");
             }
         }
     }
@@ -98,9 +94,9 @@ public final class RemoteService extends Service {
                     KeepAliveConfig.DEF_ICONS = iconRes;
                     KeepAliveConfig.TITLE = discription;
                 } else {
-                    KeepAliveConfig.CONTENT = SPUtils.getInstance(getApplicationContext(),SP_NAME).getString(KeepAliveConfig.CONTENT);
-                    KeepAliveConfig.DEF_ICONS = SPUtils.getInstance(getApplicationContext(),SP_NAME).getInt(KeepAliveConfig.RES_ICON,R.drawable.ic_launcher);
-                    KeepAliveConfig.TITLE = SPUtils.getInstance(getApplicationContext(),SP_NAME).getString(KeepAliveConfig.TITLE);
+                    KeepAliveConfig.CONTENT = SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.CONTENT);
+                    KeepAliveConfig.DEF_ICONS = SPUtils.getInstance(getApplicationContext(), SP_NAME).getInt(KeepAliveConfig.RES_ICON, R.drawable.ic_launcher);
+                    KeepAliveConfig.TITLE = SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.TITLE);
 
                 }
                 if (KeepAliveConfig.TITLE != null && KeepAliveConfig.CONTENT != null) {
@@ -109,7 +105,7 @@ public final class RemoteService extends Service {
                     intent2.setAction(NotificationClickReceiver.CLICK_NOTIFICATION);
                     Notification notification = NotificationUtils.createNotification(RemoteService.this, KeepAliveConfig.TITLE, KeepAliveConfig.CONTENT, KeepAliveConfig.DEF_ICONS, intent2);
                     startForeground(KeepAliveConfig.FOREGROUD_NOTIFICATION_ID, notification);
-                    Log.d("JOB-->",TAG+"2 显示通知栏");
+                    Log.d("JOB-->", TAG + "2 显示通知栏");
                 }
             }
         }
@@ -138,7 +134,7 @@ public final class RemoteService extends Service {
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            shouDefNotify(null);
+            shouDefNotify();
         }
     };
 

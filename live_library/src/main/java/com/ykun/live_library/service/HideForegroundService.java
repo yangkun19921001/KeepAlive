@@ -8,7 +8,7 @@ import android.os.IBinder;
 
 import com.ykun.live_library.config.KeepAliveConfig;
 import com.ykun.live_library.config.NotificationUtils;
-import com.ykun.live_library.revices.NotificationClickReceiver;
+import com.ykun.live_library.receive.NotificationClickReceiver;
 import com.ykun.live_library.utils.SPUtils;
 
 import static com.ykun.live_library.config.KeepAliveConfig.SP_NAME;

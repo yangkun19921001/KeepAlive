@@ -11,7 +11,7 @@ import com.ykun.live_library.KeepAliveManager;
 import com.ykun.live_library.config.ForegroundNotification;
 import com.ykun.live_library.config.ForegroundNotificationClickListener;
 
-import static com.ykun.live_library.config.RunMode.POWER_SAVING;
+import static com.ykun.live_library.config.RunMode.HIGH_POWER_CONSUMPTION;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -33,11 +33,11 @@ public class MainActivity extends AppCompatActivity {
 
     public void start() {
         //启动保活服务
-        KeepAliveManager.startWork(
+        KeepAliveManager.toKeepAlive(
                 getApplication()
-                , POWER_SAVING,
-                "hahahah",
-                "123123123",
+                , HIGH_POWER_CONSUMPTION,
+                "进程保活",
+                "Process: System(哥们儿) 我不想被杀死",
                 R.mipmap.ic_launcher,
                 new ForegroundNotification(
                         //定义前台服务的通知点击事件

@@ -1,15 +1,12 @@
-package com.ykun.live_library.revices;
+package com.ykun.live_library.receive;
 
-import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Looper;
 
 import com.ykun.live_library.onepx.OnePixelActivity;
-
-import java.util.List;
+import com.ykun.live_library.utils.KeepAliveUtils;
 
 @SuppressWarnings(value = {"unchecked", "deprecation"})
 public final class OnepxReceiver extends BroadcastReceiver {
@@ -23,7 +20,7 @@ public final class OnepxReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(final Context context, Intent intent) {
         if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {    //屏幕关闭的时候接受到广播
-            appIsForeground = IsForeground(context);
+            appIsForeground = KeepAliveUtils.IsForeground(context);
             try {
                 Intent it = new Intent(context, OnePixelActivity.class);
                 it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -52,15 +49,5 @@ public final class OnepxReceiver extends BroadcastReceiver {
         }
     }
 
-    public boolean IsForeground(Context context) {
-        ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        List<ActivityManager.RunningTaskInfo> tasks = am.getRunningTasks(1);
-        if (tasks != null && !tasks.isEmpty()) {
-            ComponentName topActivity = tasks.get(0).topActivity;
-            if (topActivity.getPackageName().equals(context.getPackageName())) {
-                return true;
-            }
-        }
-        return false;
-    }
+
 }

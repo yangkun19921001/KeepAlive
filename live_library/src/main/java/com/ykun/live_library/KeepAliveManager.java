@@ -32,24 +32,15 @@ public class KeepAliveManager {
      * @param runMode
      * @param foregroundNotification 前台服务
      */
-    public static void startWork(@NonNull Application application, @NonNull int runMode, String title, String content, int res_icon, ForegroundNotification foregroundNotification) {
+    public static void toKeepAlive(@NonNull Application application, @NonNull int runMode, String title, String content, int res_icon, ForegroundNotification foregroundNotification) {
         if (KeepAliveUtils.isRunning(application)) {
             KeepAliveConfig.foregroundNotification = foregroundNotification;
             SPUtils.getInstance(application, SP_NAME).put(KeepAliveConfig.TITLE, title);
             SPUtils.getInstance(application, SP_NAME).put(KeepAliveConfig.CONTENT, content);
             SPUtils.getInstance(application, SP_NAME).put(KeepAliveConfig.RES_ICON, res_icon);
-
-            Log.i("notification-->", SPUtils.getInstance(application, SP_NAME).getString(KeepAliveConfig.TITLE) + "," +
-                    SPUtils.getInstance(application, SP_NAME).getString(KeepAliveConfig.CONTENT) + "," +
-                    SPUtils.getInstance(application, SP_NAME).getInt(KeepAliveConfig.RES_ICON));
-
-
+            SPUtils.getInstance(application, SP_NAME).put(KeepAliveConfig.RUN_MODE, runMode);
             //优化后的枚举
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                RunMode.setShape(RunMode.HIGH_POWER_CONSUMPTION);
-            } else {
-                RunMode.setShape(runMode);
-            }
+            RunMode.setShape(runMode);
             KeepAliveConfig.runMode = RunMode.getShape();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 //启动定时器，在定时器中启动本地服务和守护进程
@@ -88,7 +79,7 @@ public class KeepAliveManager {
     }
 
 
-    public static void sendNotification(Context context, String title, String content, int icon,Intent intent2) {
+    public static void sendNotification(Context context, String title, String content, int icon, Intent intent2) {
         NotificationUtils.sendNotification(context, title, content, icon, intent2);
     }
 

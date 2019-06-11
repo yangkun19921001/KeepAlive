@@ -1,4 +1,4 @@
-package com.ykun.live_library.revices;
+package com.ykun.live_library.receive;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
