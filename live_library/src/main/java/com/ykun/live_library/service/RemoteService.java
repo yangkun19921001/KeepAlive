@@ -1,16 +1,25 @@
 package com.ykun.live_library.service;
 
+import android.app.Notification;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.RemoteException;
 import android.util.Log;
 
 import com.ykun.keeplive.KeepAliveAidl;
+import com.ykun.live_library.R;
+import com.ykun.live_library.config.KeepAliveConfig;
+import com.ykun.live_library.config.NotificationUtils;
+import com.ykun.live_library.revices.NotificationClickReceiver;
+import com.ykun.live_library.utils.SPUtils;
+
+import static com.ykun.live_library.config.KeepAliveConfig.SP_NAME;
 
 
 /**
@@ -18,7 +27,7 @@ import com.ykun.keeplive.KeepAliveAidl;
  */
 @SuppressWarnings(value = {"unchecked", "deprecation"})
 public final class RemoteService extends Service {
-    private MyBilder mBilder;
+    private RemoteBinder mBilder;
     private String TAG = "RemoteService";
 
 
@@ -27,7 +36,7 @@ public final class RemoteService extends Service {
         super.onCreate();
         Log.i(TAG, " onCreate");
         if (mBilder == null) {
-            mBilder = new MyBilder();
+            mBilder = new RemoteBinder();
         }
     }
 
@@ -41,9 +50,35 @@ public final class RemoteService extends Service {
         try {
             this.bindService(new Intent(RemoteService.this, LocalService.class),
                     connection, Context.BIND_ABOVE_CLIENT);
+
+            shouDefNotify(intent);
         } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
         }
         return START_STICKY;
+    }
+
+    private void shouDefNotify(Intent intent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (intent != null && intent.getExtras() != null) {
+                KeepAliveConfig.CONTENT = intent.getExtras().getString(KeepAliveConfig.CONTENT);
+                KeepAliveConfig.DEF_ICONS = intent.getExtras().getInt(KeepAliveConfig.RES_ICON, R.drawable.ic_launcher);
+                KeepAliveConfig.TITLE = intent.getExtras().getString(KeepAliveConfig.TITLE);
+            } else {
+                KeepAliveConfig.CONTENT = SPUtils.getInstance(getApplicationContext(),SP_NAME).getString(KeepAliveConfig.CONTENT);
+                KeepAliveConfig.DEF_ICONS = SPUtils.getInstance(getApplicationContext(),SP_NAME).getInt(KeepAliveConfig.RES_ICON,R.drawable.ic_launcher);
+                KeepAliveConfig.TITLE = SPUtils.getInstance(getApplicationContext(),SP_NAME).getString(KeepAliveConfig.TITLE);
+
+            }
+            if (KeepAliveConfig.TITLE != null && KeepAliveConfig.CONTENT != null) {
+                //启用前台服务，提升优先级
+                Intent intent2 = new Intent(getApplicationContext(), NotificationClickReceiver.class);
+                intent2.setAction(NotificationClickReceiver.CLICK_NOTIFICATION);
+                Notification notification = NotificationUtils.createNotification(RemoteService.this, KeepAliveConfig.TITLE, KeepAliveConfig.CONTENT, KeepAliveConfig.DEF_ICONS, intent2);
+                startForeground(KeepAliveConfig.FOREGROUD_NOTIFICATION_ID, notification);
+                Log.d("JOB-->",TAG+"显示通知栏");
+            }
+        }
     }
 
     @Override
@@ -52,11 +87,31 @@ public final class RemoteService extends Service {
         unbindService(connection);
     }
 
-    private final class MyBilder extends KeepAliveAidl.Stub {
+    private final class RemoteBinder extends KeepAliveAidl.Stub {
 
         @Override
         public void wakeUp(String title, String discription, int iconRes) throws RemoteException {
             Log.i(TAG, " wakeUp");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (title != null || discription != null) {
+                    KeepAliveConfig.CONTENT = title;
+                    KeepAliveConfig.DEF_ICONS = iconRes;
+                    KeepAliveConfig.TITLE = discription;
+                } else {
+                    KeepAliveConfig.CONTENT = SPUtils.getInstance(getApplicationContext(),SP_NAME).getString(KeepAliveConfig.CONTENT);
+                    KeepAliveConfig.DEF_ICONS = SPUtils.getInstance(getApplicationContext(),SP_NAME).getInt(KeepAliveConfig.RES_ICON,R.drawable.ic_launcher);
+                    KeepAliveConfig.TITLE = SPUtils.getInstance(getApplicationContext(),SP_NAME).getString(KeepAliveConfig.TITLE);
+
+                }
+                if (KeepAliveConfig.TITLE != null && KeepAliveConfig.CONTENT != null) {
+                    //启用前台服务，提升优先级
+                    Intent intent2 = new Intent(getApplicationContext(), NotificationClickReceiver.class);
+                    intent2.setAction(NotificationClickReceiver.CLICK_NOTIFICATION);
+                    Notification notification = NotificationUtils.createNotification(RemoteService.this, KeepAliveConfig.TITLE, KeepAliveConfig.CONTENT, KeepAliveConfig.DEF_ICONS, intent2);
+                    startForeground(KeepAliveConfig.FOREGROUD_NOTIFICATION_ID, notification);
+                    Log.d("JOB-->",TAG+"2 显示通知栏");
+                }
+            }
         }
     }
 
@@ -65,7 +120,11 @@ public final class RemoteService extends Service {
         public void onServiceDisconnected(ComponentName name) {
             Intent remoteService = new Intent(RemoteService.this,
                     LocalService.class);
-            RemoteService.this.startService(remoteService);
+            if (Build.VERSION.SDK_INT >= 26) {
+                RemoteService.this.startForegroundService(remoteService);
+            } else {
+                RemoteService.this.startService(remoteService);
+            }
             RemoteService.this.bindService(new Intent(RemoteService.this,
                     LocalService.class), connection, Context.BIND_ABOVE_CLIENT);
             PowerManager pm = (PowerManager) RemoteService.this.getSystemService(Context.POWER_SERVICE);
@@ -79,6 +138,7 @@ public final class RemoteService extends Service {
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
+            shouDefNotify(null);
         }
     };
 

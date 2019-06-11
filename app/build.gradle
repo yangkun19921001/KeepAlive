@@ -28,5 +28,4 @@ dependencies {
     implementation project(path: ':live_library')
 //    implementation project(path: ':keeplive')
 
-//    implementation 'com.fanjun:keeplive:1.1.11'
 }

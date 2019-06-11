@@ -9,6 +9,9 @@ import android.os.IBinder;
 import com.ykun.live_library.config.KeepAliveConfig;
 import com.ykun.live_library.config.NotificationUtils;
 import com.ykun.live_library.revices.NotificationClickReceiver;
+import com.ykun.live_library.utils.SPUtils;
+
+import static com.ykun.live_library.config.KeepAliveConfig.SP_NAME;
 
 
 /**
@@ -38,8 +41,13 @@ public class HideForegroundService extends Service {
         if (KeepAliveConfig.foregroundNotification != null) {
             Intent intent = new Intent(getApplicationContext(), NotificationClickReceiver.class);
             intent.setAction(NotificationClickReceiver.CLICK_NOTIFICATION);
-            Notification notification = NotificationUtils.createNotification(this, KeepAliveConfig.foregroundNotification.getTitle(), KeepAliveConfig.foregroundNotification.getDescription(), KeepAliveConfig.foregroundNotification.getIconRes(), intent);
-            startForeground(13691, notification);
+            Notification notification = NotificationUtils.createNotification(this,
+                    SPUtils.getInstance(getApplicationContext(),SP_NAME).getString(KeepAliveConfig.TITLE),
+                    SPUtils.getInstance(getApplicationContext(),SP_NAME).getString(KeepAliveConfig.CONTENT),
+                    SPUtils.getInstance(getApplicationContext(),SP_NAME).getInt(KeepAliveConfig.RES_ICON),
+                    intent
+            );
+            startForeground(KeepAliveConfig.FOREGROUD_NOTIFICATION_ID, notification);
         }
     }
 

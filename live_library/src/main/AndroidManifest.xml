@@ -3,6 +3,13 @@
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <uses-permission android:name="android.permission.BROADCAST_STICKY" />
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"></uses-permission>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"></uses-permission>
+
+
+
     <!-- android:process=":remote"-->
     <application>
         <service
@@ -21,9 +28,16 @@
         </receiver>
 
         <activity android:name="com.ykun.live_library.onepx.OnePixelActivity"></activity>
+
         <service
             android:name="com.ykun.live_library.service.JobHandlerService"
             android:permission="android.permission.BIND_JOB_SERVICE"></service>
 
+
+        <provider
+            android:authorities="com.lain.preference"
+            android:name=".pro_sp.SharedPreferenceProvider"
+            android:process=":remote"
+            android:exported="false"/>
     </application>
 </manifest>

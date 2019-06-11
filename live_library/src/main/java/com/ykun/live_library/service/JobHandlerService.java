@@ -24,6 +24,8 @@ public final class JobHandlerService extends JobService {
     private String TAG = this.getClass().getSimpleName();
     private static JobScheduler mJobScheduler;
 
+    private static int EXECUTE_COUNT = 0;
+
     public static void startJob(Context context) {
         try {
             mJobScheduler = (JobScheduler) context.getSystemService(
@@ -54,25 +56,24 @@ public final class JobHandlerService extends JobService {
     public static void stopJob() {
         if (mJobScheduler != null)
             mJobScheduler.cancelAll();
+
+
     }
 
     private void startService(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-/*            if (KeepAliveConfig.foregroundNotification != null) {
-                Intent intent2 = new Intent(this, NotificationClickReceiver.class);
-                intent2.setAction(NotificationClickReceiver.CLICK_NOTIFICATION);
-                Notification notification = NotificationUtils.createNotification(getApplicationContext(), KeepAliveConfig.foregroundNotification.getTitle(), KeepAliveConfig.foregroundNotification.getDescription(), KeepAliveConfig.foregroundNotification.getIconRes(), intent2);
-                startForeground(13691, notification);
-            }*/
-        }
         try {
             Log.i(TAG, "---》启动双进程保活服务");
             //启动本地服务
             Intent localIntent = new Intent(context, LocalService.class);
             //启动守护进程
             Intent guardIntent = new Intent(context, RemoteService.class);
-            startService(localIntent);
-            startService(guardIntent);
+            if (Build.VERSION.SDK_INT >= 26) {
+                startForegroundService(localIntent);
+                startForegroundService(guardIntent);
+            } else {
+                startService(localIntent);
+                startService(guardIntent);
+            }
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         }
@@ -81,34 +82,28 @@ public final class JobHandlerService extends JobService {
     @Override
     public boolean onStartJob(JobParameters jobParameters) {
         try {
-            Log.d("JOB-->", " Job 执行");
+            ++EXECUTE_COUNT;
+            Log.d("JOB-->", " Job 执行 " + EXECUTE_COUNT);
             //7.0以上轮询
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-
                 startJob(this);
             }
-
-            if (!KeepAliveUtils.isServiceRunning(getApplicationContext(), "com.ykun.live_library.service.LocalService")) {
-                startService(this);
-            }
-
-            if (!KeepAliveUtils.isRunningTaskExist(getApplicationContext(), getPackageName() + ":remote")) {
+            if (!KeepAliveUtils.isServiceRunning(getApplicationContext(), getPackageName() + ":local") || !KeepAliveUtils.isRunningTaskExist(getApplicationContext(), getPackageName() + ":remote")) {
+                Log.d("JOB-->", " 重新开启了 服务 ");
                 startService(this);
             }
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         }
-
         return false;
     }
 
     @Override
     public boolean onStopJob(JobParameters jobParameters) {
         Log.d("JOB-->", " Job 停止");
-        if (!KeepAliveUtils.isServiceRunning(getApplicationContext(), "com.ykun.live_library.service.LocalService:local") || !KeepAliveUtils.isRunningTaskExist(getApplicationContext(), getPackageName() + ":remote")) {
+        if (!KeepAliveUtils.isServiceRunning(getApplicationContext(), getPackageName() + ":local") || !KeepAliveUtils.isRunningTaskExist(getApplicationContext(), getPackageName() + ":remote")) {
             startService(this);
         }
         return false;
     }
-
 }

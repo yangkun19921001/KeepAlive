@@ -20,8 +20,12 @@ import com.ykun.keeplive.KeepAliveAidl;
 import com.ykun.live_library.R;
 import com.ykun.live_library.config.KeepAliveConfig;
 import com.ykun.live_library.config.NotificationUtils;
+import com.ykun.live_library.config.RunMode;
 import com.ykun.live_library.revices.NotificationClickReceiver;
 import com.ykun.live_library.revices.OnepxReceiver;
+import com.ykun.live_library.utils.SPUtils;
+
+import static com.ykun.live_library.config.KeepAliveConfig.SP_NAME;
 
 
 public final class LocalService extends Service {
@@ -29,15 +33,16 @@ public final class LocalService extends Service {
     private ScreenStateReceiver screenStateReceiver;
     private boolean isPause = true;//控制暂停
     private MediaPlayer mediaPlayer;
-    private MyBilder mBilder;
+    private LocalBinder mBilder;
     private Handler handler;
+    private String TAG = getClass().getSimpleName();
 
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.i("本地服务","：本地服务启动成功");
+        Log.i("本地服务", "：本地服务启动成功");
         if (mBilder == null) {
-            mBilder = new MyBilder();
+            mBilder = new LocalBinder();
         }
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         isPause = pm.isScreenOn();
@@ -54,17 +59,13 @@ public final class LocalService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         //播放无声音乐
-        if (mediaPlayer == null && KeepAliveConfig.runMode == KeepAliveConfig.RunMode.ROGUE) {
+        if (mediaPlayer == null && KeepAliveConfig.runMode == RunMode.HIGH_POWER_CONSUMPTION) {
             mediaPlayer = MediaPlayer.create(this, R.raw.novioce);
             mediaPlayer.setVolume(0f, 0f);
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mediaPlayer) {
-                    if (!isPause) {
-                        if (KeepAliveConfig.runMode == KeepAliveConfig.RunMode.ROGUE) {
-                            play();
-                        }
-                    }
+                    play();
                 }
             });
             play();
@@ -85,25 +86,37 @@ public final class LocalService extends Service {
         intentFilter2.addAction("_ACTION_SCREEN_OFF");
         intentFilter2.addAction("_ACTION_SCREEN_ON");
         registerReceiver(screenStateReceiver, intentFilter2);
-        //启用前台服务，提升优先级
-        Intent intent2 = new Intent(getApplicationContext(), NotificationClickReceiver.class);
-        intent2.setAction(NotificationClickReceiver.CLICK_NOTIFICATION);
-        Notification notification = NotificationUtils.createNotification(LocalService.this, getApplicationInfo().name,getApplicationInfo().name, R.drawable.ic_launcher, intent2);
-        startForeground(13691, notification);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                KeepAliveConfig.CONTENT = SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.CONTENT);
+                KeepAliveConfig.DEF_ICONS = SPUtils.getInstance(getApplicationContext(), SP_NAME).getInt(KeepAliveConfig.RES_ICON, R.drawable.ic_launcher);
+                KeepAliveConfig.TITLE = SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.TITLE);
+                if (KeepAliveConfig.TITLE != null && KeepAliveConfig.CONTENT != null) {
+                    //启用前台服务，提升优先级
+                    Intent intent2 = new Intent(getApplicationContext(), NotificationClickReceiver.class);
+                    intent2.setAction(NotificationClickReceiver.CLICK_NOTIFICATION);
+                    Notification notification = NotificationUtils.createNotification(LocalService.this, KeepAliveConfig.TITLE, KeepAliveConfig.CONTENT, KeepAliveConfig.DEF_ICONS, intent2);
+                    startForeground(KeepAliveConfig.FOREGROUD_NOTIFICATION_ID, notification);
+                    Log.d("JOB-->", TAG + "0 显示通知栏");
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
         //绑定守护进程
         try {
             Intent intent3 = new Intent(this, RemoteService.class);
             this.bindService(intent3, connection, Context.BIND_ABOVE_CLIENT);
         } catch (Exception e) {
-            Log.i("RemoteService--",e.getMessage());
+            Log.i("RemoteService--", e.getMessage());
         }
         //隐藏服务通知
         try {
-            if(Build.VERSION.SDK_INT < 25){
+            if (Build.VERSION.SDK_INT < 25) {
                 startService(new Intent(this, HideForegroundService.class));
             }
         } catch (Exception e) {
-            Log.i("HideForegroundService--",e.getMessage());
+            Log.i("HideForegroundService--", e.getMessage());
 
         }
         if (KeepAliveConfig.keepLiveService != null) {
@@ -137,8 +150,7 @@ public final class LocalService extends Service {
         }
     }
 
-    private final class MyBilder extends KeepAliveAidl.Stub {
-
+    private final class LocalBinder extends KeepAliveAidl.Stub {
         @Override
         public void wakeUp(String title, String discription, int iconRes) throws RemoteException {
 
@@ -151,7 +163,11 @@ public final class LocalService extends Service {
         public void onServiceDisconnected(ComponentName name) {
             Intent remoteService = new Intent(LocalService.this,
                     RemoteService.class);
-            LocalService.this.startService(remoteService);
+            if (Build.VERSION.SDK_INT >= 26) {
+                LocalService.this.startForegroundService(remoteService);
+            } else {
+                LocalService.this.startService(remoteService);
+            }
             Intent intent = new Intent(LocalService.this, RemoteService.class);
             LocalService.this.bindService(intent, connection,
                     Context.BIND_ABOVE_CLIENT);
@@ -169,7 +185,9 @@ public final class LocalService extends Service {
             try {
                 if (mBilder != null && KeepAliveConfig.foregroundNotification != null) {
                     KeepAliveAidl guardAidl = KeepAliveAidl.Stub.asInterface(service);
-                    guardAidl.wakeUp(KeepAliveConfig.foregroundNotification.getTitle(), KeepAliveConfig.foregroundNotification.getDescription(), KeepAliveConfig.foregroundNotification.getIconRes());
+                    guardAidl.wakeUp(SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.TITLE),
+                            SPUtils.getInstance(getApplicationContext(), SP_NAME).getString(KeepAliveConfig.CONTENT),
+                            SPUtils.getInstance(getApplicationContext(), SP_NAME).getInt(KeepAliveConfig.RES_ICON));
                 }
             } catch (RemoteException e) {
                 e.printStackTrace();

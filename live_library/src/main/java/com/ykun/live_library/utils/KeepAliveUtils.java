@@ -3,6 +3,8 @@ package com.ykun.live_library.utils;
 import android.app.ActivityManager;
 import android.app.Application;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 
 import java.util.Iterator;
 import java.util.List;
@@ -39,6 +41,10 @@ public class KeepAliveUtils {
             if (className.equals(si.service.getClassName())) {
                 isRunning = true;
             }
+
+            if (className.equals(si.process)){
+                isRunning = true;
+            }
         }
         return isRunning;
     }
@@ -52,5 +58,19 @@ public class KeepAliveUtils {
             }
         }
         return false;
+    }
+
+    public static String getApplicationName(Application application) {
+        PackageManager packageManager = null;
+        ApplicationInfo applicationInfo = null;
+        try {
+            packageManager = application.getPackageManager();
+            applicationInfo = packageManager.getApplicationInfo(application.getPackageName(), 0);
+        } catch (PackageManager.NameNotFoundException e) {
+            applicationInfo = null;
+        }
+        String applicationName =
+                (String) packageManager.getApplicationLabel(applicationInfo);
+        return applicationName;
     }
 }
