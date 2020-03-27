@@ -1,6 +1,3 @@
-Table of Contents
-=================
-
       * [怎么使用](#怎么使用)
       * [最终效果](#最终效果)
          * [开启保活](#开启保活)
@@ -22,8 +19,6 @@ Table of Contents
          * [后台循环播放一条无声文件](#后台循环播放一条无声文件)
          * [双进程守护 (靠谱)](#双进程守护-靠谱)
       * [总结](#总结)
-
-Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
 
 [如果文章中 gif 图片看不了，请移步博客](https://juejin.im/post/5cffe4d4f265da1b695d55d4)
 
