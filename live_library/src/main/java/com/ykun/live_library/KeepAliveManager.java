@@ -3,8 +3,12 @@ package com.ykun.live_library;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.util.Log;
 
 import com.ykun.live_library.config.ForegroundNotification;
@@ -81,6 +85,47 @@ public class KeepAliveManager {
 
     public static void sendNotification(Context context, String title, String content, int icon, Intent intent2) {
         NotificationUtils.sendNotification(context, title, content, icon, intent2);
+    }
+
+    /**
+     * 启动系统保活
+     * @param cex
+     */
+    public static void launcherSyskeepAlive(Context cex){
+        DevicesLaunchConfig.launchSystemKeepAlive(cex);
+    }
+
+    /**
+     * 启动电量优化
+     */
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    public static void batteryOptimizations(Context context) {
+        if (!isIgnoringBatteryOptimizations(context)) {
+            requestIgnoreBatteryOptimizations(context);
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private static boolean isIgnoringBatteryOptimizations(Context context) {
+        boolean isIgnoring = false;
+        PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+        if (powerManager != null) {
+            isIgnoring = powerManager.isIgnoringBatteryOptimizations(context.getPackageName());
+        }
+        return isIgnoring;
+    }
+
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private static void requestIgnoreBatteryOptimizations(Context context) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:" + context.getPackageName()));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }
