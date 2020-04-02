@@ -76,7 +76,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void start() {
-
         //启动保活服务
         KeepAliveManager.toKeepAlive(
                 getApplication()
@@ -102,6 +101,12 @@ public class MainActivity extends AppCompatActivity {
     public void launch_system(View view) {
         sendDelayMeg();
         KeepAliveManager.launcherSyskeepAlive(getApplicationContext());
+    }
+
+
+    @Override
+    public void onBackPressed() {
+        moveTaskToBack(true);
     }
 
     @Override
